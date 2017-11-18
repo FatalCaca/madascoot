@@ -5,27 +5,51 @@
  */
 var fps = document.getElementById("fps");
 
+var getTimestamp = function() {
+    return Math.round((new Date()).getTime());
+};
+
 function PlayState() {
     var VIEWPORT = { height: 800, width: 512 };
     var PIXEL_SIZE = 8;
     var GRID = { height: VIEWPORT.height / PIXEL_SIZE, width: VIEWPORT.width / PIXEL_SIZE };
+    var COLOR = {
+        road: "#BBB",
+        pavement: "red",
+    };
 
-    var player;
+    var scooter;
     var pixel;
+    var roadPixel;
+    var pavementPixel;
     var bullets = new jaws.SpriteList();
     var roads = [[1], [61]];
     var roadsThresholds = [[0, 10], [54, 63]];
+    var roadUpdateDelay = 8;
+    var roadUpdateCountdown = roadUpdateDelay;
 
     var updateRoads = function () {
         if (roads[0].length >= GRID.height) {
-            roads[0].shift();
-            roads[1].shift();
+            roads[0].shift()
+            roads[1].shift()
         }
 
-        leftRoad = roads[0][roads[0].length - 1];
-        rightRoad = roads[1][roads[1].length - 1];
-        leftRoad += parseInt(Math.random() * 3) - 1;
-        rightRoad += parseInt(Math.random() * 3) - 1;
+        var leftRoad = roads[0][roads[0].length - 1];
+        var rightRoad = roads[1][roads[1].length - 1];
+
+        roadUpdateCountdown--;
+
+        if (roadUpdateCountdown <= 0) {
+            roadUpdateCountdown = roadUpdateDelay;
+
+            leftRoad += parseInt(Math.random() * 3) - 1;
+            rightRoad += parseInt(Math.random() * 3) - 1;
+
+            if (leftRoad <= roadsThresholds[0][0]) { leftRoad = roadsThresholds[0][0]; }
+            if (leftRoad >= roadsThresholds[0][1]) { leftRoad = roadsThresholds[0][1]; }
+            if (rightRoad <= roadsThresholds[1][0]) { rightRoad = roadsThresholds[1][0]; }
+            if (rightRoad >= roadsThresholds[1][1]) { rightRoad = roadsThresholds[1][1]; }
+        }
 
         roads[0].push(leftRoad);
         roads[1].push(rightRoad);
@@ -33,53 +57,182 @@ function PlayState() {
 
     var drawRoads = function() {
         for (var i = roads[0].length; i >= 0; i--) {
-            pixel.drawAt(roads[0][i] * PIXEL_SIZE, PIXEL_SIZE * i);
-            pixel.drawAt(roads[1][i] * PIXEL_SIZE, PIXEL_SIZE * i);
+            roadPixel.setSize(
+                (roads[1][i] - roads[0][i]) * PIXEL_SIZE,
+                PIXEL_SIZE
+            );
+            roadPixel.drawAt(
+                roads[0][i] * PIXEL_SIZE,
+                PIXEL_SIZE * (GRID.height - i)
+            );
+
+            pavementPixel.setSize(8, 8);
+            pavementPixel.drawAt(
+                roads[0][i] * PIXEL_SIZE,
+                PIXEL_SIZE * (GRID.height - i)
+            );
+            pavementPixel.drawAt(
+                roads[1][i] * PIXEL_SIZE,
+                PIXEL_SIZE * (GRID.height - i)
+            );
         }
     };
 
-    this.setup = function() {
-        player = new jaws.Sprite({image: "img/teub.png", x: 10, y:100, scale: 1})
-        player.can_fire = true
-        pixel = new jaws.Sprite({
-            image: "img/pixel.png",
-            x: 10, y:100, scale: PIXEL_SIZE
-        });
+    var buildAnnimation = function(options) {
+        var annimation;
+        var sprites = options.sprites;
 
-        pixel.drawAt = function(x, y) {
-            pixel.moveTo(x, y);
-            pixel.draw();
+        var getCurrentSprite = function() {
+            var currentTimestamp = getTimestamp();
+            var elapsed = currentTimestamp - annimation.creationTimestamp;
+            var elapsedPeriods = elapsed / annimation.delay;
+            var index = elapsedPeriods % annimation.sprites.length;
+            index = Math.floor(index);
+
+            return annimation.sprites[index];
         };
 
+        annimation = {
+            getCurrentSprite: getCurrentSprite,
+            creationTimestamp: getTimestamp(),
+            sprites: sprites,
+            delay: options.delay
+        };
+
+        return annimation;
+    }
+
+    var buildDriver = function() {
+        var driver;
+
+        var getCurrentSprite = function() {
+            return driver.annimations.normal.getCurrentSprite();
+        };
+
+        var draw = function() {
+            var sprite = getCurrentSprite();
+            sprite.x = driver.x;
+            sprite.y = driver.y;
+            sprite.draw();
+        };
+
+        driver = {
+            draw: draw,
+            getCurrentSprite: getCurrentSprite,
+            x: 0,
+            y: 0,
+            annimations: {
+                normal: buildAnnimation({
+                    delay: 200,
+                    sprites: [
+                        jaws.Sprite({
+                            x: 0, y: 0, scale: 3,
+                            image: "img/driver_normal_1.png"
+                        }),
+                        jaws.Sprite({
+                            x: 0, y: 0, scale: 3,
+                            image: "img/driver_normal_2.png"
+                        })
+                    ]
+                })
+            }
+        };
+
+        return driver;
+
+    };
+
+    var buildScooter = function() {
+        var scooter;
+
+        var getCurrentSprite = function() {
+            return scooter.annimations.normal.getCurrentSprite();
+        };
+
+        var draw = function() {
+            var sprite = getCurrentSprite();
+            sprite.x = scooter.x;
+            sprite.y = scooter.y;
+            sprite.draw();
+
+            if (scooter.driver) {
+                scooter.driver.x = scooter.x;
+                scooter.driver.y = scooter.y;
+                scooter.driver.draw();
+            }
+        };
+
+        scooter = {
+            draw: draw,
+            getCurrentSprite: getCurrentSprite,
+            x: 200,
+            y: 700,
+            annimations: {
+                normal: buildAnnimation({
+                    delay: 500,
+                    sprites: [
+                        jaws.Sprite({
+                            x: 0, y: 0, scale: 3,
+                            image: "img/scooter_normal_1.png"
+                        }),
+                    ]
+                })
+            }
+        };
+
+        return scooter;
+    };
+
+    this.setup = function() {
+        console.log('pute ?');
+        var driver = buildDriver();
+        scooter = buildScooter();
+        scooter.driver = driver;
+
+        pixel = new jaws.Sprite({
+            x: 10, y:100, scale: PIXEL_SIZE,
+            color: "red"
+        });
+
+        roadPixel = new jaws.Sprite({
+            x: 10, y:100, scale: PIXEL_SIZE,
+            color: COLOR.road
+        });
+
+        pavementPixel = new jaws.Sprite({
+            x: 10, y:100, scale: PIXEL_SIZE,
+            color: COLOR.pavement
+        });
 
         jaws.on_keydown("esc",  function() { jaws.switchGameState(MenuState) })
         jaws.preventDefaultKeys(["up", "down", "left", "right", "space"])
     }
 
     this.update = function() {
-        if(jaws.pressed("left a"))  { player.x -= 2 }
-        if(jaws.pressed("right d")) { player.x += 2 }
-        if(jaws.pressed("up w"))    { player.y -= 2 }
-        if(jaws.pressed("down s"))  { player.y += 2 }
         if(jaws.pressed("space enter")) {
-            if(player.can_fire) {
-                bullets.push( new Bullet(player.rect().right, player.y) )
-                player.can_fire = false
-                setTimeout(function() { player.can_fire = true }, 100)
-            }
+        }
+        if(jaws.pressed("left")) {
+            scooter.x -= 4;
+        }
+        if(jaws.pressed("right")) {
+            scooter.x += 4;
+        }
+        if(jaws.pressed("up")) {
+            scooter.y -= 4;
+        }
+        if(jaws.pressed("down")) {
+            scooter.y += 4;
         }
 
         updateRoads();
 
-        forceInsideCanvas(player);
         bullets.removeIf(isOutsideCanvas);
     }
 
     this.draw = function() {
         jaws.clear()
-        player.draw()
-        bullets.draw()  // will call draw() on all items in the list
         drawRoads();
+        scooter.draw();
     }
 
     function isOutsideCanvas(item) {
@@ -135,5 +288,8 @@ window.onload = function() {
     jaws.assets.add("img/teub.png")
     jaws.assets.add("img/goutte.png")
     jaws.assets.add("img/pixel.png")
+    jaws.assets.add("img/scooter_normal_1.png")
+    jaws.assets.add("img/driver_normal_1.png")
+    jaws.assets.add("img/driver_normal_2.png")
     jaws.start(MenuState)
 }

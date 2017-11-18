@@ -1834,6 +1834,17 @@ jaws.Sprite = function Sprite(options) {
   this.context = options.context ? options.context : jaws.context;  // Prefer given canvas-context, fallback to jaws.context
 }
 
+
+jaws.Sprite.prototype.drawAt = function(x, y) {
+    this.moveTo(x, y);
+    this.draw();
+};
+
+jaws.Sprite.prototype.setSize = function(x, y) {
+    this.width = x;
+    this.height = y;
+}
+
 jaws.Sprite.prototype.default_options = {
   x: 0, 
   y: 0, 
