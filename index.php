@@ -3,6 +3,12 @@
   <head>
     <script src="jaws/jaws.js"></script>
     <script src="jaws/src/extras/sprite_list.js"></script>
+    <script src="Config.js"></script>
+    <script src="Utils.js"></script>
+    <script src="Annimation.js"></script>
+    <script src="Scooter.js"></script>
+    <script src="Driver.js"></script>
+    <script src="RoadHole.js"></script>
     <script src="game.js"></script>
     <link type="text/css" rel="stylesheet" href="style.css" />
     <title>Ta mère</title>
