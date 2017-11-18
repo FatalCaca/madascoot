@@ -10,6 +10,14 @@ var getTimestamp = function() {
 };
 
 function PlayState() {
+    var CONFIG = {
+        MAX_LEANING_TIME: 750,
+        MAX_LEANING_ANGLE: 90,
+        LEANING_FALL_THRESHOLD: 80,
+        LATERAL_MAX_SPEED: 10
+    };
+
+    var debugText = "";
     var VIEWPORT = { height: 800, width: 512 };
     var PIXEL_SIZE = 8;
     var GRID = { height: VIEWPORT.height / PIXEL_SIZE, width: VIEWPORT.width / PIXEL_SIZE };
@@ -27,6 +35,19 @@ function PlayState() {
     var roadsThresholds = [[0, 10], [54, 63]];
     var roadUpdateDelay = 8;
     var roadUpdateCountdown = roadUpdateDelay;
+
+    var showText = function(text) {
+        debugText = text;
+    };
+
+    var drawDebugText = function() {
+        jaws.context.font = "bold 20pt terminal";
+        jaws.context.lineWidth = 10
+        jaws.context.fillStyle = "red"
+        jaws.context.strokeStyle =  "rgba(200,200,200,0.0)"
+        jaws.context.fillText(debugText, 30, 100)
+
+    }
 
     var updateRoads = function () {
         if (roads[0].length >= GRID.height) {
@@ -106,7 +127,19 @@ function PlayState() {
         var driver;
 
         var getCurrentSprite = function() {
-            return driver.annimations.normal.getCurrentSprite();
+            return driver.currentAnnimation.getCurrentSprite();
+        };
+
+        var leanLeft = function() {
+            driver.currentAnnimation = driver.annimations.left;
+        };
+
+        var leanRight = function() {
+            driver.currentAnnimation = driver.annimations.right;
+        };
+
+        var stopLeaning = function() {
+            driver.currentAnnimation = driver.annimations.normal;
         };
 
         var draw = function() {
@@ -118,12 +151,41 @@ function PlayState() {
 
         driver = {
             draw: draw,
+            leanRight: leanRight,
+            leanLeft: leanLeft,
+            stopLeaning: stopLeaning,
             getCurrentSprite: getCurrentSprite,
             x: 0,
             y: 0,
             annimations: {
+                left: buildAnnimation({
+                    delay: 300,
+                    sprites: [
+                        jaws.Sprite({
+                            x: 0, y: 0, scale: 3,
+                            image: "img/driver_penche_gauche_1.png"
+                        }),
+                        jaws.Sprite({
+                            x: 0, y: 0, scale: 3,
+                            image: "img/driver_penche_gauche_2.png"
+                        })
+                    ]
+                }),
+                right: buildAnnimation({
+                    delay: 150,
+                    sprites: [
+                        jaws.Sprite({
+                            x: 0, y: 0, scale: 3,
+                            image: "img/driver_penche_droite_1.png"
+                        }),
+                        jaws.Sprite({
+                            x: 0, y: 0, scale: 3,
+                            image: "img/driver_penche_droite_2.png"
+                        })
+                    ]
+                }),
                 normal: buildAnnimation({
-                    delay: 200,
+                    delay: 150,
                     sprites: [
                         jaws.Sprite({
                             x: 0, y: 0, scale: 3,
@@ -138,6 +200,8 @@ function PlayState() {
             }
         };
 
+        driver.currentAnnimation = driver.annimations.normal;
+
         return driver;
 
     };
@@ -146,8 +210,75 @@ function PlayState() {
         var scooter;
 
         var getCurrentSprite = function() {
+            if (scooter.angle <= -10) {
+                return scooter.annimations.left.getCurrentSprite();
+            }
+            if (scooter.angle >= 10) {
+                return scooter.annimations.right.getCurrentSprite();
+            }
+
             return scooter.annimations.normal.getCurrentSprite();
         };
+
+        var leanLeft = function() {
+            scooter.leaningState = scooter.LEANING.LEFT;
+            scooter.driver.leanLeft();
+        };
+
+        var leanRight = function() {
+            scooter.leaningState = scooter.LEANING.RIGHT;
+            scooter.driver.leanRight();
+        };
+
+        var stopLeaning = function() {
+            scooter.leaningState = scooter.LEANING.NONE;
+            scooter.driver.stopLeaning();
+        };
+
+        var update = function() {
+            var currentTimestamp = getTimestamp();
+            var elapsedSinceLastUpdate = currentTimestamp - scooter.lastUpdateAt;
+            var leaningProgress = elapsedSinceLastUpdate / CONFIG.MAX_LEANING_TIME;
+
+            if (scooter.leaningState === scooter.LEANING.LEFT) {
+                scooter.angle -= CONFIG.MAX_LEANING_ANGLE * leaningProgress;
+
+                if (scooter.angle < -CONFIG.MAX_LEANING_ANGLE) {
+                    scooter.angle = -CONFIG.MAX_LEANING_ANGLE
+                }
+            }
+
+            if (scooter.leaningState === scooter.LEANING.RIGHT) {
+                scooter.angle += CONFIG.MAX_LEANING_ANGLE * leaningProgress;
+
+                if (scooter.angle > CONFIG.MAX_LEANING_ANGLE) {
+                    scooter.angle = CONFIG.MAX_LEANING_ANGLE
+                }
+            }
+
+            if (scooter.leaningState === scooter.LEANING.NONE) {
+                if (scooter.angle > 0) {
+                    scooter.angle -= CONFIG.MAX_LEANING_ANGLE * leaningProgress;
+                }
+                else {
+                    scooter.angle += CONFIG.MAX_LEANING_ANGLE * leaningProgress;
+                }
+
+                if (Math.abs(scooter.angle) <= 5) {
+                    scooter.angle = 0;
+                }
+            }
+
+            scooter.x += Math.sin(scooter.getDegreeAngle()) * CONFIG.LATERAL_MAX_SPEED;
+
+            showText(scooter.angle);
+
+            scooter.lastUpdateAt = getTimestamp();
+        };
+
+        var getDegreeAngle = function() {
+            return scooter.angle * (Math.PI / 180);
+        }
 
         var draw = function() {
             var sprite = getCurrentSprite();
@@ -163,10 +294,23 @@ function PlayState() {
         };
 
         scooter = {
+            LEANING: {
+                LEFT: "left",
+                RIGHT: "right",
+                NONE: "none",
+            },
+            leanLeft: leanLeft,
+            leanRight: leanRight,
+            stopLeaning: stopLeaning,
+            getDegreeAngle: getDegreeAngle,
+            startedLeaningAt: 0,
             draw: draw,
+            lastUpdateAt: getTimestamp(),
+            update: update,
             getCurrentSprite: getCurrentSprite,
             x: 200,
             y: 700,
+            angle: 0,
             annimations: {
                 normal: buildAnnimation({
                     delay: 500,
@@ -174,6 +318,24 @@ function PlayState() {
                         jaws.Sprite({
                             x: 0, y: 0, scale: 3,
                             image: "img/scooter_normal_1.png"
+                        }),
+                    ]
+                }),
+                left: buildAnnimation({
+                    delay: 300,
+                    sprites: [
+                        jaws.Sprite({
+                            x: 0, y: 0, scale: 3,
+                            image: "img/scooter_penche_gauche.png"
+                        }),
+                    ]
+                }),
+                right: buildAnnimation({
+                    delay: 300,
+                    sprites: [
+                        jaws.Sprite({
+                            x: 0, y: 0, scale: 3,
+                            image: "img/scooter_penche_droite.png"
                         }),
                     ]
                 })
@@ -209,13 +371,19 @@ function PlayState() {
     }
 
     this.update = function() {
+        var leftPressed = jaws.pressed("left");
+        var rightPressed = jaws.pressed("right");
+
         if(jaws.pressed("space enter")) {
         }
-        if(jaws.pressed("left")) {
-            scooter.x -= 4;
+        if(leftPressed) {
+            scooter.leanLeft();
         }
-        if(jaws.pressed("right")) {
-            scooter.x += 4;
+        if(rightPressed) {
+            scooter.leanRight();
+        }
+        if (!rightPressed && !leftPressed) {
+            scooter.stopLeaning();
         }
         if(jaws.pressed("up")) {
             scooter.y -= 4;
@@ -225,6 +393,7 @@ function PlayState() {
         }
 
         updateRoads();
+        scooter.update();
 
         bullets.removeIf(isOutsideCanvas);
     }
@@ -233,6 +402,7 @@ function PlayState() {
         jaws.clear()
         drawRoads();
         scooter.draw();
+        drawDebugText();
     }
 
     function isOutsideCanvas(item) {
@@ -289,6 +459,12 @@ window.onload = function() {
     jaws.assets.add("img/goutte.png")
     jaws.assets.add("img/pixel.png")
     jaws.assets.add("img/scooter_normal_1.png")
+    jaws.assets.add("img/scooter_penche_droite.png")
+    jaws.assets.add("img/scooter_penche_gauche.png")
+    jaws.assets.add("img/driver_penche_gauche_1.png")
+    jaws.assets.add("img/driver_penche_gauche_2.png")
+    jaws.assets.add("img/driver_penche_droite_1.png")
+    jaws.assets.add("img/driver_penche_droite_2.png")
     jaws.assets.add("img/driver_normal_1.png")
     jaws.assets.add("img/driver_normal_2.png")
     jaws.start(MenuState)

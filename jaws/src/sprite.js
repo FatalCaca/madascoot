@@ -286,16 +286,6 @@ jaws.Sprite.prototype.setAnchor = function(value) {
 }
 
 
-jaws.Sprite.prototype.drawAt = function(x, y) {
-    this.moveTo(x, y);
-    this.draw();
-};
-console.log('ta mère la pute');
-jaws.Sprite.prototype.resize = function(x, y) {
-    this.width = x;
-    this.height = y;
-}
-
 /** @private */
 jaws.Sprite.prototype.cacheOffsets = function() {
   if(!this.image) { return }
