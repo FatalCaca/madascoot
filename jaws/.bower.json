@@ -1,0 +1,41 @@
+{
+  "name": "jaws",
+  "homepage": "https://github.com/ippa/jaws",
+  "authors": [
+    "ippa <ippa@ippa.se>"
+  ],
+  "description": "HTML5 canvas javascript 2D Game Framework",
+  "main": "jaws.js",
+  "keywords": [
+    "game",
+    "game",
+    "frmework",
+    "2d",
+    "canvas",
+    "html5",
+    "sprite",
+    "animation",
+    "collision",
+    "detection",
+    "sprite",
+    "sheet",
+    "quadtree",
+    "rect",
+    "tilemap"
+  ],
+  "license": "LGPL",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "test"
+  ],
+  "_release": "0bfdc45532",
+  "_resolution": {
+    "type": "branch",
+    "branch": "master",
+    "commit": "0bfdc4553220060f2272f0c133bd00616e10884c"
+  },
+  "_source": "https://github.com/ippa/jaws.git",
+  "_target": "*",
+  "_originalSource": "jaws"
+}
