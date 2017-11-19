@@ -1,4 +1,5 @@
 var debugText = "";
+var particuleManager;
 
 var showText = function(text) {
     debugText = text;

@@ -6,8 +6,12 @@
     <script src="Config.js"></script>
     <script src="Utils.js"></script>
     <script src="Annimation.js"></script>
+    <script src="Particule.js"></script>
+    <script src="ParticuleManager.js"></script>
+    <script src="ParticuleSpawner.js"></script>
     <script src="Scooter.js"></script>
-    <script src="Driver.js"></script>
+    <script src="DRIVER.js"></script>
+    <script src="Road.js"></script>
     <script src="RoadHole.js"></script>
     <script src="game.js"></script>
     <link type="text/css" rel="stylesheet" href="style.css" />

@@ -1,5 +1,5 @@
 buildScooter = function() {
-    var scooter;
+    var scooter = {};
 
     var getCurrentSprite = function() {
         if (scooter.angle <= -10) {
@@ -64,6 +64,7 @@ buildScooter = function() {
         scooter.x += Math.sin(scooter.getDegreeAngle()) * CONFIG.LATERAL_MAX_SPEED;
 
         showText(scooter.angle);
+        exhaust.update();
 
         scooter.lastUpdateAt = getTimestamp();
     };
@@ -95,7 +96,7 @@ buildScooter = function() {
         leanRight: leanRight,
         stopLeaning: stopLeaning,
         getDegreeAngle: getDegreeAngle,
-        startedLeaningAt: 0,
+        startedLeaningA: 0,
         draw: draw,
         lastUpdateAt: getTimestamp(),
         update: update,
@@ -133,6 +134,29 @@ buildScooter = function() {
             })
         }
     };
+
+    var exhaust = ParticuleSpawner(
+        scooter,
+        particuleManager,
+        300,
+        50,
+        buildAnnimation({
+            delay: 500,
+            sprites: [
+                jaws.Sprite({
+                    x: 0, y: 0, scale: 5,
+                    image: "img/pixel.png"
+                }),
+            ]
+        }),
+        { x: 70, y: 180 },
+        { x: 0, y: 0, angle: 0, alpha: 1, width: 8, height: 8 , alpha: 1},
+        { x: 0, y: 200, angle: 100, alpha: 1, width: 32, height: 32, alpha: 0 },
+    );
+
+
+    scooter.exhaust = exhaust;
+    console.log(exhaust);
 
     return scooter;
 };
